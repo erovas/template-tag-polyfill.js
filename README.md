@@ -34,5 +34,5 @@
 
 ## License - Licencia
 
-(EN) This project is licensed under the BSD 3-Clause License - see the [LICENSE.md](LICENSE.md) file for details.\
-(ES) Este proyecto está licenciado bajo Licencia BSD 3-Clause - ver el archivo [LICENSE.md](LICENSE.md) para mas detalles.
+(EN) This project is licensed under the BSD 3-Clause License - see the [LICENSE](https://github.com/erovas/template-tag-polyfill.js/blob/main/LICENSE) file for details.\
+(ES) Este proyecto está licenciado bajo Licencia BSD 3-Clause - ver el archivo [LICENCIA](https://github.com/erovas/template-tag-polyfill.js/blob/main/LICENSE) para mas detalles.
