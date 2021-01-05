@@ -26,7 +26,7 @@
 
 ## API
 (EN) The same as modern browsers.\
-(ES) La misma que los navegadores modernos.\
+(ES) La misma que los navegadores modernos.
 
 ## Authors - Autores
 
