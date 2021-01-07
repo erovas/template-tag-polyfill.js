@@ -24,6 +24,7 @@ if(!('content' in document.createElement('template'))){
     const TemplateTagName = 'TEMPLATE';
     const innerHTMLText = '-_-innerHTMLText';
     const innerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
+    const outerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'outerHTML');
     const createElement = Document.prototype.createElement;
     let templates = document.getElementsByTagName('template');
 
@@ -66,7 +67,7 @@ if(!('content' in document.createElement('template'))){
 
     //#endregion
 
-    //#region Redefinicion de innerHTML
+    //#region Redefinicion de innerHTML y outerHTML
 
     [Element.prototype, HTMLElement.prototype].forEach(function(item){
         Object.defineProperty(item, 'innerHTML', {
@@ -104,6 +105,43 @@ if(!('content' in document.createElement('template'))){
 
                     for (let i = 0; i < tls.length; i++)
                         _renderTemplate(tls[i]);
+                }
+            }
+        });
+
+        Object.defineProperty(item, 'outerHTML', {
+            get: function(){
+                //Devuelve el pseudo innerHTML
+                if(this.tagName !== TemplateTagName)
+                    return outerHTML.get.call(this);
+
+                const tag = TemplateTagName.toLowerCase();
+                return '<' + tag + '>' + this.innerHTML + '</' + tag + '>';
+            },
+            set: function(value){
+                const parent = this.parentNode;
+
+                if (parent) {
+
+                    if(this.tagName !== TemplateTagName)
+                        return outerHTML.set.call(this, value);
+
+                    //Se generan los nodos
+                    div.innerHTML = value;
+                    const childAdd = [].slice.call(div.childNodes);
+
+                    if(childAdd.length === 0)
+                        return parent.removeChild(this);
+
+                    //se reemplaza el nodo outerdiado
+                    parent.replaceChild(childAdd[0], this);
+
+                    //Se agregan los demas nodos en orden
+                    for (let i = 1; i < childAdd.length; i++)
+                        parent.insertBefore(childAdd[i], childAdd[i-1].nextSibling);
+                } 
+                else {
+                    throw new Error("Failed to set the 'outerHTML' property on 'Element': This element has no parent node.");
                 }
             }
         });
