@@ -106,7 +106,9 @@ if(!('content' in document.createElement('template'))){
                     for (let i = 0; i < tls.length; i++)
                         _renderTemplate(tls[i]);
                 }
-            }
+            },
+            configurable: true,
+            enumerable: true
         });
 
         Object.defineProperty(item, 'outerHTML', {
@@ -117,7 +119,9 @@ if(!('content' in document.createElement('template'))){
                 const fullTagName = outerHTML.get.call(this);
                 const tag = TemplateTagName.toLowerCase();
                 return fullTagName.slice(0, fullTagName.indexOf('>') + 1) + this.innerHTML + '</' + tag + '>';
-            }
+            },
+            configurable: true,
+            enumerable: true
         });
     });
 
