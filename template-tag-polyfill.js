@@ -114,8 +114,9 @@ if(!('content' in document.createElement('template'))){
                 if(this.tagName !== TemplateTagName)
                     return outerHTML.get.call(this);
 
+                const fullTagName = outerHTML.get.call(this);
                 const tag = TemplateTagName.toLowerCase();
-                return '<' + tag + '>' + this.innerHTML + '</' + tag + '>';
+                return fullTagName.slice(0, fullTagName.indexOf('>') + 1) + this.innerHTML + '</' + tag + '>';
             }
         });
     });
