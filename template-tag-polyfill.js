@@ -45,6 +45,7 @@ if(!('content' in document.createElement('template'))){
             fragment.appendChild(child[0]);
             
         tag.content = fragment;
+        tag.constructor = HTMLTemplateElement;
     }
 
     //#region Renderizado de los templates existentes en el documento durante el parseo del mismo
@@ -140,6 +141,7 @@ if(!('content' in document.createElement('template'))){
             if(tag.tagName === TemplateTagName){
                 tag.content = this.createDocumentFragment();
                 tag[innerHTMLText] = '';
+                tag.constructor = HTMLTemplateElement;
             }
 
             return tag;
