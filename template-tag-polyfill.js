@@ -25,6 +25,8 @@ if(!('content' in document.createElement('template'))){
     const innerHTMLText = '-_-innerHTMLText';
     const innerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
     const outerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'outerHTML');
+    const removeChild = Element.prototype.removeChild;
+    const appendChild = Element.prototype.appendChild;
     const createElement = Document.prototype.createElement;
     let templates = document.getElementsByTagName('template');
 
@@ -42,7 +44,8 @@ if(!('content' in document.createElement('template'))){
         const fragment = document.createDocumentFragment();
 
         while(child[0])
-            fragment.appendChild(child[0]);
+            appendChild.call(fragment, child[0]);
+            //fragment.appendChild(child[0]);
             
         tag.content = fragment;
         tag.constructor = HTMLTemplateElement;
@@ -83,7 +86,13 @@ if(!('content' in document.createElement('template'))){
 
                 if(this.tagName === TemplateTagName){
                     //Se generan los nodos y con ello el nuevo pseudo innerHTML
-                    div.innerHTML = value;
+                    //div.innerHTML = value;
+                    innerHTML.set.call(div, value);
+                    const tls = [].slice.call(div.getElementsByTagName(TemplateTagName.toLowerCase()));
+                    
+                    for (let i = 0; i < tls.length; i++)
+                        _renderTemplate(tls[i]);
+
                     this[innerHTMLText] = innerHTML.get.call(div);
 
                     const content = this.content;
@@ -92,11 +101,13 @@ if(!('content' in document.createElement('template'))){
 
                     //Se eliminan los nodos del content del template
                     while(childRemove[0])
-                        content.removeChild(childRemove[0]);
+                        removeChild.call(content, childRemove[0]);
+                        //content.removeChild(childRemove[0]);
 
                     //Se agregan los nuevos nodos al content del template
                     while(childAdd[0])
-                        content.appendChild(childAdd[0]);
+                        appendChild.call(content, childAdd[0]);
+                        //content.appendChild(childAdd[0]);
                 }
                 else {
                     innerHTML.set.call(this, value);
