@@ -1,145 +1,199 @@
 /**
- * template-tag-polyfill.js v1.0.0
+ * template-tag-polyfill.js v1.1.0
  * Polyfill de <template> que intenta darle toda la funcionalidad nativa de este elemento en navegadores que NO lo soportan
  * [Back-compatibility: IE11+]
  * Copyright (c) 2021, Emanuel Rojas Vásquez
  * BSD 3-Clause License
  * https://github.com/erovas/template-tag-polyfill.js
  */
-if(!('content' in document.createElement('template'))){
+(function(window, document){
 
-    //#region Estilo para ocultar contenido de los templates
+    if(window.HTMLTemplateElement)
+        return;
+
+    //#region CONSTANTES
+
+    let INNERHTML_TXT = 'innerHTML';
+    let OUTERHTML_TXT = 'outerHTML';
+    let TEMPLATE_TAGNAME = 'TEMPLATE';
+
+    //Guardara de forma "privada" un pseudo innerHTML del <template>
+    let INNERHTML_ATTRIBUTE = '-i';  
     
-    let style = document.createElement('style');
-    style.innerHTML = 'template { display: none; }';
-    document.head.appendChild(style);
-    style = undefined;
+    //Funciones nativas, porque se van a sobre escribir
+    let PROTOTYPE_HTMLELEMENT = HTMLElement.prototype;
+    let NATIVE_INNERHTML = Object.getOwnPropertyDescriptor(PROTOTYPE_HTMLELEMENT, INNERHTML_TXT);
+    let NATIVE_OUTERHTML = Object.getOwnPropertyDescriptor(PROTOTYPE_HTMLELEMENT, OUTERHTML_TXT);
+    let NATIVE_REMOVECHILD = PROTOTYPE_HTMLELEMENT.removeChild;
+    let NATIVE_APPENDCHILD = PROTOTYPE_HTMLELEMENT.appendChild;
+    let NATIVE_CREATEELEMENT = document.createElement;
+
+    //<style> utilizado para display:none de todos los <template>
+    let STYLE = NATIVE_CREATEELEMENT.call(document, 'style');
+
+    //<div> utilizado para renderizar y generar el innerHTML
+    let DIV = NATIVE_CREATEELEMENT.call(document, 'div');
+
+    //Lista de nodos que estan en el DOM, para posteriormente renderizarlos
+    let NODELIST_TEMPLATE = document.getElementsByTagName(TEMPLATE_TAGNAME);
 
     //#endregion
 
-    //Para emular el instanceof y la interfaz del objeto nativo
-    window.HTMLTemplateElement = window.HTMLElement;
+    //#region Funciones auxiliares
 
-    const div = document.createElement('div');
-    const TemplateTagName = 'TEMPLATE';
-    const innerHTMLText = '-_-innerHTMLText';
-    const innerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'innerHTML');
-    const outerHTML = Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML') || Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'outerHTML');
-    const removeChild = Element.prototype.removeChild;
-    const appendChild = Element.prototype.appendChild;
-    const createElement = Document.prototype.createElement;
-    let templates = document.getElementsByTagName('template');
+    /**
+     * Renderiza y hace el polyfill de un <template> previamente creado
+     * @param {HTMLElement} tag 
+     */
+    function _aux_renderTemplate(tag){
 
-
-    const _renderTemplate = function(tag){
-
-        //El template ya esta renderizado
+        //El <template> YA está renderizado
         if(tag.content)
             return;
 
-        //Se genera un pseudo innerHTML
-        tag[innerHTMLText] = innerHTML.get.call(tag);
+        //Generar speudo innerHTML
+        tag[INNERHTML_ATTRIBUTE] = NATIVE_INNERHTML.get.call(tag);
 
-        const child = tag.childNodes;
-        const fragment = document.createDocumentFragment();
+        let child = tag.childNodes;
+        tag.content = document.createDocumentFragment();
 
+        //Se llena el "content" con los hijos ilegitimos de <template>
         while(child[0])
-            appendChild.call(fragment, child[0]);
-            //fragment.appendChild(child[0]);
-            
-        tag.content = fragment;
+            NATIVE_APPENDCHILD.call(tag.content, child[0]);
+
+        //Asociar el constructor "original" reemplazando a "HTMLUnknownElement"
         tag.constructor = HTMLTemplateElement;
     }
 
-    //#region Renderizado de los templates existentes en el documento durante el parseo del mismo
+    /**
+     * Para realizar la acción de renderizado de los <template> que estan en el nodelist
+     */
+    function _aux_action(){
+        //Asi para evitar problemas con el nodeList, porque quizas dentro de
+        //<template> hay otro <template>
+        let ARRAY_TEMPLATE = [].slice.call(NODELIST_TEMPLATE);
 
-    let mutation = new MutationObserver(function(mtns){
-        //Quizas hay templates dentro de los templates
-        const tls = [].slice.call(templates);
-
-        for (let i = 0; i < tls.length; i++)
-            _renderTemplate(tls[i]);
-    });
-
-    mutation.observe(document.getElementsByTagName('html')[0], { childList: true, subtree: true });
-
-    window.addEventListener('load', function(){
-        mutation.disconnect();
-        mutation = undefined;
-        templates = undefined;
-    }, { once: true });
+        for (let i = 0; i < ARRAY_TEMPLATE.length; i++)
+            _aux_renderTemplate(ARRAY_TEMPLATE[i]);
+    }
 
     //#endregion
 
-    //#region Redefinicion de innerHTML y outerHTML
+    //#region Polyfill inicial en el DOM ya creado
 
-    [Element.prototype, HTMLElement.prototype].forEach(function(item){
-        Object.defineProperty(item, 'innerHTML', {
-            get: function(){
-                //Devuelve el pseudo innerHTML
-                if(this.tagName === TemplateTagName)
-                    return this[innerHTMLText];
-                    
-                return innerHTML.get.call(this);
-            },
-            set: function(value){
+    //Para emular el "instanceof" y la interfaz del objeto nativo
+    window.HTMLTemplateElement = HTMLElement;
 
-                if(this.tagName === TemplateTagName){
-                    //Se generan los nodos y con ello el nuevo pseudo innerHTML
-                    //div.innerHTML = value;
-                    innerHTML.set.call(div, value);
-                    const tls = [].slice.call(div.getElementsByTagName(TemplateTagName.toLowerCase()));
-                    
-                    for (let i = 0; i < tls.length; i++)
-                        _renderTemplate(tls[i]);
+    //Ocultar <template>
+    NATIVE_INNERHTML.set.call(STYLE, 'template{display:none}');
+    NATIVE_APPENDCHILD.call(document.head, STYLE);
 
-                    this[innerHTMLText] = innerHTML.get.call(div);
-
-                    const content = this.content;
-                    const childAdd = div.childNodes;
-                    const childRemove = content.childNodes;
-
-                    //Se eliminan los nodos del content del template
-                    while(childRemove[0])
-                        removeChild.call(content, childRemove[0]);
-                        //content.removeChild(childRemove[0]);
-
-                    //Se agregan los nuevos nodos al content del template
-                    while(childAdd[0])
-                        appendChild.call(content, childAdd[0]);
-                        //content.appendChild(childAdd[0]);
-                }
-                else {
-                    innerHTML.set.call(this, value);
-
-                    //Si dentro del tag donde se ha hecho el inner hay algun template, se renderiza
-                    const tls = [].slice.call(this.getElementsByTagName(TemplateTagName.toLowerCase()));
-
-                    for (let i = 0; i < tls.length; i++)
-                        _renderTemplate(tls[i]);
-                }
-            },
-            configurable: true,
-            enumerable: true
+    //Renderizar todos los <template> que estan en el documento
+    if(document.readyState == 'complete'){
+        _aux_action();
+        NODELIST_TEMPLATE = null;
+    }
+    else {
+        let mutation = new MutationObserver(_aux_action);
+        mutation.observe(document.documentElement, { childList: true, subtree: true });
+        window.addEventListener('load', function(){
+            mutation.disconnect();
+            mutation = NODELIST_TEMPLATE = null;
         });
-
-        Object.defineProperty(item, 'outerHTML', {
-            get: function(){
-                if(this.tagName !== TemplateTagName)
-                    return outerHTML.get.call(this);
-
-                const fullTagName = outerHTML.get.call(this);
-                const tag = TemplateTagName.toLowerCase();
-                return fullTagName.slice(0, fullTagName.indexOf('>') + 1) + this.innerHTML + '</' + tag + '>';
-            },
-            configurable: true,
-            enumerable: true
-        });
-    });
+    }
 
     //#endregion
 
-    //#region Redefinicion de createElement()
+    //#region Redefinicion de metodos nativos
+
+    Object.defineProperty(PROTOTYPE_HTMLELEMENT, INNERHTML_TXT, {
+
+        get: function(){
+            //Devuelve el pseudo innerHTML string si es un <template>
+            return this.tagName == TEMPLATE_TAGNAME? this[INNERHTML_ATTRIBUTE] : NATIVE_INNERHTML.get.call(this);
+        },
+
+        set: function(value){
+
+            let that = this;
+            let array_templates;
+            let i;
+
+            if(that.tagName == TEMPLATE_TAGNAME){
+
+                //Se renderizan los nodos.
+                NATIVE_INNERHTML.set.call(DIV, value);
+
+                //Se genera el pseudo innerHTML string
+                that[INNERHTML_ATTRIBUTE] = NATIVE_INNERHTML.get.call(DIV);
+
+                //Posibles <template> dentro del <template>
+                array_templates = [].slice.call(DIV.getElementsByTagName(TEMPLATE_TAGNAME));
+
+                //Se polyfillicean los posibles <templates> internos
+                for (i = 0; i < array_templates.length; i++)
+                    _aux_renderTemplate(array_templates[i]);
+
+                let content = that.content;
+                let childAdd = DIV.childNodes;
+                let childRemove = content.childNodes;
+                
+                //Se eliminan los nodos del content del template
+                while(childRemove[0])
+                    NATIVE_REMOVECHILD.call(content, childRemove[0]);
+
+                //Se agregan los nuevos nodos al content del template
+                while(childAdd[0])
+                    NATIVE_APPENDCHILD.call(content, childAdd[0]);
+            }
+            else {
+                //NO es un <template>
+                NATIVE_INNERHTML.set.call(that, value);
+
+                //Posibles <template> dentro del este <element>
+                array_templates = [].slice.call(DIV.getElementsByTagName(TEMPLATE_TAGNAME));
+
+                //Se polyfillicean los posibles <templates> internos
+                for (i = 0; i < array_templates.length; i++)
+                    _aux_renderTemplate(array_templates[i]);
+            }
+        },
+
+        configurable: true,
+        enumerable: true
+    });
+
+    Object.defineProperty(PROTOTYPE_HTMLELEMENT, OUTERHTML_TXT, {
+
+        get: function(){
+
+            let that = this;
+
+            if(that.tagName != TEMPLATE_TAGNAME)
+                return NATIVE_OUTERHTML.get.call(that);
+
+            let template = TEMPLATE_TAGNAME.toLowerCase();
+            let n_outer = '<' + template;
+            let attrs = that.attributes;
+            let element;
+            let i;
+
+            //Montaje de un outerHTML simulado (toca de esta manera, o sino NO genera bien el <tag>)
+            for (i = 0; i < attrs.length; i++) {
+                element = attrs[i];
+                n_outer += ' ' + element.name + '="' + element.value + '"';
+            }
+            
+            return n_outer + '>' + that[INNERHTML_TXT] + '</' + template + '>';
+        },
+
+        set: function(value){
+            NATIVE_OUTERHTML.set.call(this, value);
+        },
+
+        configurable: true,
+        enumerable: true
+    });
 
     Object.defineProperty(Document.prototype, 'createElement', {
         configurable: true,
@@ -147,11 +201,10 @@ if(!('content' in document.createElement('template'))){
         writable: true,
         value: function(tagName, options){
 
-            const tag = createElement.apply(this, arguments);
+            let tag = NATIVE_CREATEELEMENT.apply(this, arguments);
 
-            if(tag.tagName === TemplateTagName){
+            if(tag.tagName == TEMPLATE_TAGNAME){
                 tag.content = this.createDocumentFragment();
-                tag[innerHTMLText] = '';
                 tag.constructor = HTMLTemplateElement;
             }
 
@@ -160,4 +213,5 @@ if(!('content' in document.createElement('template'))){
     });
 
     //#endregion
-}
+
+})(window, document);
