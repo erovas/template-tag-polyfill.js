@@ -3,7 +3,7 @@
  * Polyfill de <template> que intenta darle toda la funcionalidad nativa de este elemento en navegadores que NO lo soportan
  * [Back-compatibility: IE11+]
  * Copyright (c) 2021, Emanuel Rojas Vásquez
- * BSD 3-Clause License
+ * MIT License
  * https://github.com/erovas/template-tag-polyfill.js
  */
 (function(window, document){
